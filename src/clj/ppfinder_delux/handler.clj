@@ -32,19 +32,15 @@
   (response {:foo "bar"}))
 
 
-(defroutes frontend-routes
+(defroutes routes
            (GET "/" [] (loading-page))
            (GET "/about" [] (loading-page))
+           (GET "/data.json" [] (dataHandler))
+
            (resources "/")
            (not-found "Not Found"))
 
 (defroutes api
-           (GET "/data" [] (dataHandler))
-           )
+           (GET "/data" [] (dataHandler)))
 
-(def app
-  (routes (-> frontend-routes
-              (wrap-middleware))
-          (-> api
-              (wrap-json-response))
-          ))
+(def app (wrap-middleware #'routes))
