@@ -1,5 +1,5 @@
 (ns ppfinder-delux.handler
-  (:require [compojure.core :refer [GET defroutes]]
+  (:require [compojure.core :refer [GET defroutes routes]]
             [compojure.route :refer [not-found resources]]
             [hiccup.page :refer [include-js include-css html5]]
             [ppfinder-delux.middleware :refer [wrap-middleware]]
@@ -28,19 +28,30 @@
      mount-target
      (include-js "/js/app.js")]))
 
-(defn dataHandler []
-  (response {:foo "bar"}))
+(defn data-handler [request]
+  (response {:foo "bar", :headers (get-in request [:headers])}))
 
+(defroutes app-routes
+  (GET "/" [] (loading-page))
+  (GET "/about" [] (loading-page))
+  (GET "/data" request (data-handler request)))
 
-(defroutes routes
-           (GET "/" [] (loading-page))
-           (GET "/about" [] (loading-page))
-           (GET "/data.json" [] (dataHandler))
+(defroutes api-routes
+  (GET "/" [] {:body {:title "the 'root' route"}})
+  (GET "/data" request (data-handler request))
+  (GET "/about" [] {:body {:title "About Pretty Print Finder"}}))
 
-           (resources "/")
-           (not-found "Not Found"))
+(defn content-type
+  [content-type route-with-content]
+  (fn [request]
+    (if (= content-type (get-in request [:headers "content-type"]))
+      (route-with-content request))))
 
-(defroutes api
-           (GET "/data" [] (dataHandler)))
+(def all-routes
+  (routes
+   (content-type "application/json" (wrap-json-response api-routes))
+   app-routes
+   (resources "/")
+   (not-found "Not Found")))
 
-(def app (wrap-middleware #'routes))
+(def app (wrap-middleware all-routes))
